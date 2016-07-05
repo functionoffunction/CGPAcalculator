@@ -1,7 +1,7 @@
 /********************************************************
 *OLUWATIMILEHIN AKOGUN                                  *
-*Title:                                                 *
-*Date:                                                  *
+*Title: CGPA Calculator with Multidata linked lisk      *
+*version: 1.0                                           *
 *Github: functionOfFunction                             *
 *Email: akoguntimi@gmail.com                            *
 *License: Open source                                   *
@@ -41,7 +41,6 @@ struct students
 
 int create_student(struct students** head, char* name)
 {
-  //correct later
   struct students* temp1 = (struct students*) malloc(sizeof(struct students));
   if (temp1 == NULL) return 0; //can not dereference NULL
 
@@ -168,15 +167,15 @@ struct course* get_student_course_by_id(int id, struct course* courses){
   return courses;
 }
 
-void write_header(FILE* fp, struct courses_list* all){
-
+int write_courses(FILE* fp, struct courses_list* all){
+  int course_num = 0;
   while (all != NULL) {
     //printf("%s", strcat(all->course_code,",") ); //memory usage strcat O(n+m)  for two strings
-    printf("%s",  all->course_code); // no concatenation O(0)
-    printf(",");
+    fprintf(fp, "%s,",  all->course_code); // no concatenation O(0)
     all = all->next;
+    course_num++;
   }
-  printf("CGPA\n");
+  return course_num;
 }
 
 int grade_score(double score){
@@ -195,7 +194,7 @@ int grade_score(double score){
   }
 }
 
-void write_student_record_csv(FILE* fp, struct course* courses){ //selection sort
+void write_student_record_csv(FILE* fp, struct course* courses, int number_of_courses){ //selection sort
   double cum_score = 0;
   double total_units = 0;
   double score;
@@ -208,6 +207,7 @@ void write_student_record_csv(FILE* fp, struct course* courses){ //selection sor
   int track = 0;
   int highest = 0;
   int last_pos = 0;
+  int previous_highest = number_of_courses;
 
   while (temp != NULL) {
     int course_pos = temp->address->pos;
@@ -233,20 +233,31 @@ void write_student_record_csv(FILE* fp, struct course* courses){ //selection sor
       temp = courses; // start allover
       if (highest == 0) break; //comes back unchanged
       track = highest;
+
+
+      while (previous_highest > highest) {// to put missing commas
+          fputs(",", fp);
+          previous_highest--;
+        }
+
+
+
       fprintf(fp, "%lf", score);
-      // while () {// to put missing commas
-      //
-      // }
+      // fprintf(fp, "{%d}", highest);
 
       printf("%d\n", highest);
-      fputs(",", fp);
       cum_score = cum_score + (grade_score(score) * unit );
       total_units = total_units + unit ;
       highest = 0; //reset
     }
   }
-  fprintf(fp, "%lf", cum_score/total_units);
-  fputs("\n", fp);
+  int remaining_cell_count = previous_highest +  1;
+  while (remaining_cell_count > 1 ) {//trailing commas
+    fputs(",", fp);
+    remaining_cell_count--;
+  }
+  //prints cgpa and the terminates line
+  fprintf(fp, "%lf\n", cum_score/total_units);
 }
 
 int main(void)
@@ -423,24 +434,26 @@ int main(void)
         printf("Enter document name(*.csv) for export: ");
         scanf("%s", doc_name);
 
-        // check if file exist, prompt for replacement or rename
-        // save as .csv
+        // add check if file exist, prompt for replacement or rename
+
 
         FILE *fp;
         fp = fopen(doc_name, "w+");
-        write_header(fp, all);
+
+        // prints heading
+        fputs("s/n,Matric Number,", fp);
+        int number_of_courses = write_courses(fp, all);
+        fputs("CGPA\n", fp);
+
+        // prints body
         struct students* temp = head;
+        int serial_number = 0;
         while (temp != NULL) {
-          write_student_record_csv(fp, temp->course);
+          fprintf(fp, "%d,", ++serial_number);
+          fprintf(fp, "%s,", temp->name);
+          write_student_record_csv(fp, temp->course, number_of_courses);
           temp = temp->another;
         }
-
-
-        //
-        // fprintf(fp, "This is testing for fprintf...\n");
-        // fputs("This is testing for fputs...\n", fp);
-        // fputs("This is tes ting for fputs...\n", fp);
-        // fputc(1,fp);
         fclose(fp);
       }
     }
